@@ -1,42 +1,34 @@
 const https = require("https");
 const http = require("http");
+const EventEmitter = require("events").EventEmitter;
+const util = require("util");
 
-function printErrorMessage(error) {
-    console.error(` ${error}`);
-}
-function printProfile(profileData) {
-    console.log(`   Profile with ${profileData.profile_name} found 
-    Full Name : ${profileData.name}
-    JavaScript points : ${profileData.points.JavaScript} `);
 
-}
 
-function profile(username) {
-    const request = https.get(`https://teamtreehouse.com/${username}.json`, response => {
+function Profile(username) {
+
+    EventEmitter.call(this);
+
+    let  profileEmitter = this;
+
+    const request = https.get("https://teamtreehouse.com/" + username + ".json", response => {
+        console.log(response.statusCode);
         let body = "";
-        if(response.statusCode !== 200) {
-        let errorMessage = `There was an error getting the profile for ${username} due to  ${http.STATUS_CODES[response.statusCode] }`;
-        printErrorMessage(errorMessage);
-        }
         response.on('data', data => {
            body += data;
         });
         response.on('end', () => {
             try {
-                let profile = JSON.parse(body.toString());
-                if (!profile.name){
-                    let errorMessage = `${username} not found`;
-                    printErrorMessage(errorMessage);
-                } else {
-                    printProfile(profile);
-                }
-
+               let profile = JSON.parse(body.toString());
+               profileEmitter.emit("end",profile);
+               //the profileEmitter emits the event end with variable profile as argument
             } catch(error) {
-               let  errorMessage = `parsing error for the profile ${username}`;
-               printErrorMessage(errorMessage);
+               profileEmitter.emit("error",error);
             }
+        }).on("error", error => {
+           profileEmitter.emit("error",error);
         });
     });
 }
-
-module.exports = profile;
+util.inherits(Profile, EventEmitter)
+module.exports = Profile;
