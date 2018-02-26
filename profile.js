@@ -12,7 +12,6 @@ function Profile(username) {
     let  profileEmitter = this;
 
     const request = https.get("https://teamtreehouse.com/" + username + ".json", response => {
-        console.log(response.statusCode);
         let body = "";
         response.on('data', data => {
            body += data;

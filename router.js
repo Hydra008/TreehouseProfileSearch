@@ -1,21 +1,36 @@
-const Profile = require("./profile.js");
+const Profile = require("./profile");
+const renderer = require("./renderer");
+const querystring = require("querystring");
 
+const commonHeader = {'Content-Type': 'text/html'};
 function homeRouter(request, response) {
     if(request.url === "/") {
-        response.writeHead(200, {'Content-Type': 'text/plain'});
-        response.write("Header\n");
-        response.write("Search\n");
-        response.end('Footer\n');
+        if(request.method.toLowerCase() === "get") {
+            response.writeHead(200, commonHeader);
+            renderer.view("header", {}, response);
+            renderer.view("search", {}, response);
+            renderer.view("footer", {}, response);
+            response.end();
+        }
+        else {
+            // request is of Post method
+            request.on('data',(postBody)=> {
+                //data in PostBody is buffer stream
+                let query = querystring.parse(postBody.toString());
+
+                response.writeHead(303,{"location" : `/${query.username}`});
+                response.end();
+            })
+        }
     }
 }
 
 function user(request, response) {
     let username = request.url.replace("/", "");
     if(username.length > 0) {
-        response.writeHead(200, {'Content-Type': 'text/plain'});
-        response.write("");
+        response.writeHead(200,commonHeader);
+        renderer.view("header",{},response);
         let studentProfile = new Profile(username);
-        // The student profile listens to the end event of Profile() and receives the profile as the argument
         studentProfile.on("end", profileJSON => {
             let profileValues = {
                 avatarUrl: profileJSON.gravatar_url,
@@ -23,14 +38,19 @@ function user(request, response) {
                 badges: profileJSON.badges.length,
                 javascriptPoints: profileJSON.points.JavaScript
             }
-            response.write(`${profileValues.username} has  ${profileValues.badges}  badges\n`);
-            response.end('');
+            renderer.view("profile",profileValues,response);
+            renderer.view("footer",{},response);
+            response.end();
         });
 
         studentProfile.on("error", error => {
             //show error
-            response.write(`${error.message} +\n `);
-            response.end('Footer\n');
+            response.writeHead(200, commonHeader);
+            renderer.view("header",{},response);
+            renderer.view("error",{errorMessage : error.message},response);
+            renderer.view("search",{},response);
+            renderer.view("footer",{},response);
+            response.end();
         });
 
     }
